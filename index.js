@@ -1,3 +1,26 @@
+/*
+  changelogs:
+
+  19 Oct
+  - new models => user and review
+  - relationship =>
+    - review.author => user._id
+    - restaurant.owner => user._id
+  - using postman to test routes response
+  - registration flow => POST '/register' with hardcoded: name, email, password
+  - new review flow => POST '/review' with hardcoded: title, description, author( user._id)
+  - get all reviews flow => GET '/reviews' with populated `author`
+  - update on new restaurant flow => POST '/restaurant' with hardcoded `author`
+  - creating `pre-save` hooks for `User` schema
+    - so we can create routes `/profile/:slug`, making it more readable
+      rather than using user._id
+  - creating `pre-save` hooks for `Restaurant` schema
+    - so we can create routes `/restaurants/:slug`, making it more readable
+      rather than using restaurant._id
+    - in a case that the url is not providing a `slug`, fallback to `/restaurants/:id` route
+*/
+
+
 // setting all global variables (note: why const? cos it won't change)
 // notice that port for mongodb is not really needed
 const dbUrl = 'mongodb://localhost/test'
@@ -61,7 +84,27 @@ mongoose.connect(dbUrl, {
 
 // NEW ROUTE - REGISTER - to show the new user form
 app.get('/register', (req, res) => {
-  res.send('register form page')
+  res.render('users/register')
+})
+
+// NEW ROUTE - PROFILE - to show the user profile page
+// pseudocode
+// get the slug
+// find user by the slug
+// render profile page with user details based on the slug
+app.get('/profile/:slug', (req, res) => {
+  // res.send(`this is the profile page for ${req.params.slug}`)
+  // findOne method is from mongoose. google it up
+  User.findOne({
+    slug: req.params.slug
+  })
+  .then((user) => {
+    // UPDATE BEFORE CLASS 20 Oct
+    // render a new page with the user data found from the db
+    res.render('users/show', {
+      user
+    })
+  }) // if i found the user
 })
 
 // NEW ROUTE - POST NEW USER - to handle register form submission
@@ -71,24 +114,25 @@ app.get('/register', (req, res) => {
 // - use mongoose to create those document in the db
 // - redirect to somewhere
 app.post('/register', (req, res) => {
+  // UPDATE BEFORE CLASS 20 Oct
+  var formData = req.body
   var newUser = new User({
-    name: 'Shumin',
-    email: 'shumin@ga.co',
-    password: 'test123'
-  }) // creating empty `User` object
+    name: formData.name,
+    // this name => slug => alex-min
+    // hence, /profile/alex-min
+    email: formData.email,
+    password: formData.password // NOTICE, we're going to update this
+  })
 
-  // PITSTOP: UPDATE UPDATE
-  // no .catch() for save
-  // this is very similar to how mongoose.connect
+  // // PITSTOP: UPDATE UPDATE
+  // // no .catch() for save
+  // // this is very similar to how mongoose.connect
   newUser.save() // save the object that was created
   .then(
-    () => res.send('user is saved'), // success flow
+    user => res.redirect(`/profile/${user.slug}`),
+    // success flow, redirect to profile page
     err => res.send(err) // error flow
   )
-
-  // if we can run then(), the user has been saved
-
-  // res.send(newUser)
 })
 
 // FIND ALL REVIEW
@@ -102,18 +146,25 @@ app.get('/reviews', (req, res) => {
 })
 
 // CREATE NEW REVIEW
-app.post('/review', (req, res) => {
-  var newReview = new Review({
-    title: 'Another one',
-    description: 'Another another',
-    author: '59e81c0f83674583051f18b1'
-  }) // creating empty `User` object
+app.post('/reviews', (req, res) => {
+  // UPDATE BEFORE 20 OCT => update route to `/reviews` for uniformity sake
+  // similar flow like registration
+  // - take form data
+  // - create new review
 
-  // res.send( newReview )
+  // TODO: link currently logged in User with review form
+  var formData = req.body
+
+  var newReview = new Review({
+    title: formData.title,
+    description: formData.description,
+    author: '59e81c0f83674583051f18b1'
+  }) // creating empty `Review` object
+
   newReview.save() // save the object that was created
   .then(
-    (doc) => res.send(doc),
-    // success flow, will be given `doc` that is saved
+    // success flow, for now is to redirect to all reviews route
+    () => res.redirect('/reviews'),
     err => res.send('error happened')
   )
 })
@@ -143,15 +194,48 @@ app.get('/restaurants/new', (req, res) => {
   res.render('restaurants/new')
 })
 
+// UPDATE 19 OCT
+// PSEUDOCODE
+// - check the url, if the param is 24 in length
+// - run next route
+// - if not
+//  - find by slug
+app.get('/restaurants/:slug', (req, res, next) => {
+  // res.send(`find existing restaurant with slug: ${req.params.slug.length}`)
+  var slug = req.params.slug
+  if (slug.length === 24) {
+    next()
+  } else {
+    // this part here, runs if slug is less than 24
+    // technically this part here, is the same like the part after
+    Restaurant.findOne({
+      slug // remember the es6 object literal
+    })
+    .populate('owner')
+    .then(restaurant => {
+      // UPDATE BEFORE CLASS 20 OCT
+      // please take a look at the view file `restaurants/show`
+      res.render('restaurants/show', {
+        restaurant
+      })
+    })
+  }
+})
+
 // READ ONE
 app.get('/restaurants/:id', (req, res) => {
   // instead of find all, we can `findById`
-  Restaurant.findById(req.params.id) // no need limit since there's only one
+  Restaurant
+  .findById(req.params.id) // no need limit since there's only one
+  .populate('owner')
+  // .populate(<field name>)
   .then(restaurant => {
     // not restaurants, cos it's single restaurant
 
     // PITSTOP: look at the views folders here, compare it with the res.render
     // first argument
+
+    // res.send(restaurant)
 
     res.render('restaurants/show', {
       restaurant
@@ -176,12 +260,22 @@ app.post('/restaurants', (req, res) => {
   newRestaurant.name = formData.name
   newRestaurant.cuisine = formData.cuisine
 
+  // new field for `owner`
+  newRestaurant.owner = '59e81ae9c90d27819c166d67'
+
   // when save function is done
   // the newRestaurant will have an id, hence we can go straight to the
   // newly created restaurant page
+
+  // res.send(newRestaurant)
+  // use `res.send` to test the output of anything
+
   newRestaurant.save()
-  .then(() => res.redirect(`/restaurants/${newRestaurant.id}`))
-  .catch(err => console.log(err))
+  // UPDATE. 19 Oct
+  .then(
+    () => res.redirect(`/restaurants/${newRestaurant.id}`),
+    err => res.send(err)
+  ) // why? mongoose save(), doesn't have .catch()
 })
 
 // UPDATE ONE

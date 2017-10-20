@@ -6,7 +6,19 @@ const Schema = mongoose.Schema // constructor for all schema
 const userSchema = new Schema({
   name: String,
   email: String,
-  password: String
+  password: String,
+  slug: String // new field for vanity url
+})
+
+// UPDATE 19 Oct, created pre-save hook for slug name
+// http://mongoosejs.com/docs/middleware.html
+userSchema.pre('save', function(next) {
+  var user = this
+  // logic to create slug
+  user.slug = user.name.toLowerCase().split(' ').join('-')
+
+  console.log('pre save flow', user)
+  next()
 })
 
 // active the blueprint
