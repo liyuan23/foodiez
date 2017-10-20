@@ -78,14 +78,37 @@ mongoose.connect(dbUrl, {
 // note: remember all the model file we created on models/restaurant.js,
 // we'll use it again
 
-// 19 OCT
-// NOW I'M ABLE TO CREATE NEW USER, BUT WE NEED TO REQUIRE
-// THE MODEL FILE FIRST
+const register_routes = require('./routes/register_routes')
+// pass the request for /register
+// to 'register_routes.js'
+app.use('/register', register_routes)
 
 // NEW ROUTE - REGISTER - to show the new user form
 app.get('/register', (req, res) => {
   res.render('users/register')
 })
+
+
+// const reviews_routes = require('./routes/reviews_routes')
+// // pass the request for /register
+// // to 'register_routes.js'
+// app.use('/reviews', register_routes)
+//
+// // NEW ROUTE - REGISTER - to show the new user form
+// app.get('/reviews', (req, res) => {
+//   res.render('users/reviews')
+// })
+// app.use('/reviews', review_routes)
+//
+// // NEW ROUTE - REGISTER - to show the new user form
+// app.get('/register', (req, res) => {
+//   res.render('users/register')
+// })
+// 19 OCT
+// NOW I'M ABLE TO CREATE NEW USER, BUT WE NEED TO REQUIRE
+// THE MODEL FILE FIRST
+// UPDATE 20 Oct
+// require all my route files
 
 // NEW ROUTE - PROFILE - to show the user profile page
 // pseudocode
@@ -113,27 +136,26 @@ app.get('/profile/:slug', (req, res) => {
 // - create new user object
 // - use mongoose to create those document in the db
 // - redirect to somewhere
-app.post('/register', (req, res) => {
-  // UPDATE BEFORE CLASS 20 Oct
-  var formData = req.body
-  var newUser = new User({
-    name: formData.name,
-    // this name => slug => alex-min
-    // hence, /profile/alex-min
-    email: formData.email,
-    password: formData.password // NOTICE, we're going to update this
-  })
+// app.post('/register', (req, res) => {
+//   // UPDATE BEFORE CLASS 20 Oct
+//   var formData = req.body
+//   var newUser = new User({
+//     name: formData.name,
+//     // this name => slug => alex-min
+//     // hence, /profile/alex-min
+//     email: formData.email,
+//     password: formData.password // NOTICE, we're going to update this
+  // })
 
   // // PITSTOP: UPDATE UPDATE
   // // no .catch() for save
   // // this is very similar to how mongoose.connect
-  newUser.save() // save the object that was created
-  .then(
-    user => res.redirect(`/profile/${user.slug}`),
-    // success flow, redirect to profile page
-    err => res.send(err) // error flow
-  )
-})
+  // newUser.save() // save the object that was created
+  // .then(
+  //   user => res.redirect(`/profile/${user.slug}`),
+  //   // success flow, redirect to profile page
+  //   err => res.send(err) // error flow
+  // )
 
 // FIND ALL REVIEW
 app.get('/reviews', (req, res) => {
