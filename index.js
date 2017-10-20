@@ -15,6 +15,7 @@ const methodOverride = require('method-override') // for accessing PUT / DELETE
 // PITSTOP, look at file inside models folder now
 const Restaurant = require('./models/restaurant')
 const User = require('./models/user')
+const Review = require('./models/review')
 
 // initiating express, by calling express variable
 const app = express()
@@ -76,13 +77,45 @@ app.post('/register', (req, res) => {
     password: 'test123'
   }) // creating empty `User` object
 
+  // PITSTOP: UPDATE UPDATE
+  // no .catch() for save
+  // this is very similar to how mongoose.connect
   newUser.save() // save the object that was created
-  .then( () => res.send('user is saved'))
-  .catch( err => res.send(err) )
+  .then(
+    () => res.send('user is saved'), // success flow
+    err => res.send(err) // error flow
+  )
 
   // if we can run then(), the user has been saved
 
   // res.send(newUser)
+})
+
+// FIND ALL REVIEW
+app.get('/reviews', (req, res) => {
+  Review.find()
+  .populate('author')
+  // it will go to the field called `author`
+  // and look at the schema
+  // find what it's referring to
+  .then(data => res.send(data))
+})
+
+// CREATE NEW REVIEW
+app.post('/review', (req, res) => {
+  var newReview = new Review({
+    title: 'Another one',
+    description: 'Another another',
+    author: '59e81c0f83674583051f18b1'
+  }) // creating empty `User` object
+
+  // res.send( newReview )
+  newReview.save() // save the object that was created
+  .then(
+    (doc) => res.send(doc),
+    // success flow, will be given `doc` that is saved
+    err => res.send('error happened')
+  )
 })
 
 // READ ALL

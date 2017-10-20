@@ -15,6 +15,5 @@ const User = mongoose.model('User', userSchema)
 // look for users collection in mDb
 // we can name the object differently as to the DB registry
 
-
 // need to export this
 module.exports = User
