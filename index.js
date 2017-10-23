@@ -1,5 +1,6 @@
 /*
   changelogs:
+
   19 Oct
   - new models => user and review
   - relationship =>
@@ -15,13 +16,36 @@
   - creating `pre-save` hooks for `Restaurant` schema
     - so we can create routes `/restaurants/:slug`, making it more readable rather than using restaurant._id
     - in a case that the url is not providing a `slug`, fallback to `/restaurants/:id` route
-*/
 
+ 20 Oct
+ - refactoring routes
+  - take a look at the file `route`, to see our current route plans
+  - created 4 routes files as per route plans
+  - removed `model` files `require` from index.js, except `User` and `Restaurant`
+ - Register flow for `User`
+  - update `pre('save')` hooks, to allow the plain text password => hashed password
+ - Register and Login for `Admin`
+  - similar to `User` create `pre('save')` hooks for register purposes
+  - also added our first *INSTANCE METHOD* that helps us to compare login password
+    and hashed password
+  - added flow if register failed
+    - checked if register with incorrect `admin registration code` === '42admin'
+    - if incorrect, redirect to `/admin/register`
+  - added flow if login failed
+    - if email not found, redirected to `/admins/login`
+    - if password is incorrect, redirected to `/admins/login`
+  - created a search flow, through `fetch` POST request
+    - new routes '/search' (GET & POST)
+    - new front end js to start the `fetch`
+    - embed jQuery to manipulate the dom
+    - search in real time for currect restaurant in our db
+    - new public folder that hosts our `static` files (unit 1 files)
+*/
 
 // setting all global variables (note: why const? cos it won't change)
 // notice that port for mongodb is not really needed
-const dbUrl = 'mongodb://liyuan23:unwi2424@ds127105.mlab.com:27105/tvshowtours' || 'mongodb://localhost/test'
-const port = process.env.PORT || 4000 // this is for our express server
+const dbUrl = 'mongodb://localhost/test'
+const port = 4000 // this is for our express server
 
 // installing all modules
 const express = require('express')
@@ -41,12 +65,14 @@ const methodOverride = require('method-override') // for accessing PUT / DELETE
 const User = require('./models/user')
 const Restaurant = require('./models/restaurant')
 
-
 // UPDATE 20 Oct
 // require all my route files
 const register_routes = require('./routes/register_routes')
 const review_routes = require('./routes/review_routes')
 const restaurant_routes = require('./routes/restaurant_routes')
+const admin_register_routes = require('./routes/admin_register_routes')
+// UPDATE AFTER 20 OCT
+const login_routes = require('./routes/login_routes')
 
 // initiating express, by calling express variable
 const app = express()
@@ -92,7 +118,7 @@ mongoose.connect(dbUrl, {
 // HOMEPAGE
 app.get('/', (req, res) => {
   // the return of then
-  Restaurant.find().limit(10)
+  Restaurant.find().limit(9)
   .then(restaurants => {
     // at this point we got our data so we can render our page
 
@@ -128,6 +154,31 @@ app.get('/profile/:slug', (req, res) => {
   }) // if i found the user
 })
 
+// NEW ROUTE - SEARCH - for realtime search of our restaurant db
+app.get('/search', (req, res) => {
+  res.render('search')
+})
+
+// PSEUDOCODE
+// - wait for any request with keyword data
+// - if received, performed a find with keyword as a    //   regex patter
+// - return a json back to the `frontend.js`
+app.post('/search', (req, res) => {
+  const keyword = req.body.keyword
+  const regex = new RegExp(keyword, 'i')
+  // make a regex patter out of the keyword
+  // put an 'i' option so it's case INSENSITIVE
+
+  Restaurant.find({
+    name: regex
+  })
+  .limit(9)
+  // so we don't show all
+  // update 22 oct, show 9 for aesthetics
+  .then(restaurants => res.send(restaurants))
+  .catch(err => res.send(err)) // in case we have an error
+})
+
 // pass the request for /register
 // to 'register_routes.js'
 // pass the request for /reviews
@@ -135,9 +186,15 @@ app.get('/profile/:slug', (req, res) => {
 // pass the request for /restaurants
 // to 'restaurant_routes.js'
 
+// NEW ROUTES - admin registration flow
 app.use('/register', register_routes)
 app.use('/reviews', review_routes)
 app.use('/restaurants', restaurant_routes)
+app.use('/admin', admin_register_routes)
+
+// AFTER CLASS 20 Oct
+// LOGIN FLOW FOR USER, similar to admin
+app.use('/login', login_routes)
 
 // UPDATE 20 October,
 // remove all registration routes in index.js

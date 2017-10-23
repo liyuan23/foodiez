@@ -1,45 +1,49 @@
-// requiring mongoose again
+// UPDATE 20 Oct
+// New model => ADMIN
+// This is pretty much the same like how `User` model works
+
+// NOTICE
+// NOT `userSchema` but `adminSchema`
+// NOT `user.password` but `admin.password`
+
 const mongoose = require('mongoose')
 const Schema = mongoose.Schema // constructor for all schema
-
-// UPDATE 20 Oct
-// requiring bcrypt
 const bcrypt = require('bcrypt')
 
-// setting the blueprint of User object
 const adminSchema = new Schema({
   name: String,
   email: String,
-  password: String,
+  password: String
 })
 
-// UPDATE 20 Oct, before we save the password, we hash it
-// and save the hash instead
-adminSchema.pre('save', function(next) {
+adminSchema.pre('save', function (next) {
   var admin = this
-  // no need slug admin
+  // no need slug for `Admin` model
   // user.slug = user.name.toLowerCase().split(' ').join('-')
 
-  // logic to create hash
-  // Only hash the password if it has been modified (or is new)
-  // if (!user.isModified('password')) return next();
-
-  //hash the password
   bcrypt.hash(admin.password, 10)
-  .then(hash => { // the then method here is when we got the hash
-    // UPDATE 20 OCT
-    // call the next() when the password is hashed
+  .then(hash => {
     admin.password = hash
-    // console.log('pre save flow', user)
-    next() // next() is calling the save()
+    console.log(`admin saved to db is ${admin}`);
+    next()
+  })
+  .catch(err => {
+    next(err)
   })
 })
 
-// active the blueprint
-// registering the name of the database that we're connecting to
+// UPDATE 20 Oct, create first instance method
+// PSEUDOCODE
+// - use bcrypt to compare plainPassword
+// - with hashed password
+adminSchema.methods.validPassword = function (plainPassword, callback) {
+  bcrypt.compare(plainPassword, this.password, callback)
+  // the `callback` will receive two arguments
+  // (<error object, if any>, <true/false>)
+}
+
+// activate the blueprint
 const Admin = mongoose.model('Admin', adminSchema)
-// look for users collection in mDb
-// we can name the object differently as to the DB registry
 
 // need to export this
 module.exports = Admin
