@@ -21,7 +21,7 @@
 // setting all global variables (note: why const? cos it won't change)
 // notice that port for mongodb is not really needed
 const dbUrl = 'mongodb://liyuan23:unwi2424@ds127105.mlab.com:27105/tvshowtours' || 'mongodb://localhost/test'
-const port = process.env.MONGODB_URI || 4000 // this is for our express server
+const port = process.env.PORT || 4000 // this is for our express server
 
 // installing all modules
 const express = require('express')
