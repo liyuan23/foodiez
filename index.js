@@ -1,6 +1,5 @@
 /*
   changelogs:
-
   19 Oct
   - new models => user and review
   - relationship =>
@@ -12,19 +11,17 @@
   - get all reviews flow => GET '/reviews' with populated `author`
   - update on new restaurant flow => POST '/restaurant' with hardcoded `author`
   - creating `pre-save` hooks for `User` schema
-    - so we can create routes `/profile/:slug`, making it more readable
-      rather than using user._id
+    - so we can create routes `/profile/:slug`, making it more readable rather than using user._id
   - creating `pre-save` hooks for `Restaurant` schema
-    - so we can create routes `/restaurants/:slug`, making it more readable
-      rather than using restaurant._id
+    - so we can create routes `/restaurants/:slug`, making it more readable rather than using restaurant._id
     - in a case that the url is not providing a `slug`, fallback to `/restaurants/:id` route
 */
 
 
 // setting all global variables (note: why const? cos it won't change)
 // notice that port for mongodb is not really needed
-const dbUrl = 'mongodb://localhost/test'
-const port = 4000 // this is for our express server
+const dbUrl = 'mongodb://liyuan23:unwi2424@ds127105.mlab.com:27105/tvshowtours' || 'mongodb://localhost/test'
+const port = process.env.MONGODB_URI || 4000 // this is for our express server
 
 // installing all modules
 const express = require('express')
@@ -36,9 +33,20 @@ const methodOverride = require('method-override') // for accessing PUT / DELETE
 
 // requiring actual file now
 // PITSTOP, look at file inside models folder now
-const Restaurant = require('./models/restaurant')
+
+// UPDATE 20 Oct
+// We're only loading models at the route files
+// but we're keeping `Restaurant` and `User` models here
+// cos `/` and `/profile/:slug` need those models
 const User = require('./models/user')
-const Review = require('./models/review')
+const Restaurant = require('./models/restaurant')
+
+
+// UPDATE 20 Oct
+// require all my route files
+const register_routes = require('./routes/register_routes')
+const review_routes = require('./routes/review_routes')
+const restaurant_routes = require('./routes/restaurant_routes')
 
 // initiating express, by calling express variable
 const app = express()
@@ -77,38 +85,28 @@ mongoose.connect(dbUrl, {
 // ROUTE sections
 // note: remember all the model file we created on models/restaurant.js,
 // we'll use it again
+// UPDATE 20 Oct, we don't use the model in this file anymore
 
-const register_routes = require('./routes/register_routes')
-// pass the request for /register
-// to 'register_routes.js'
-app.use('/register', register_routes)
-
-// NEW ROUTE - REGISTER - to show the new user form
-app.get('/register', (req, res) => {
-  res.render('users/register')
-})
-
-
-// const reviews_routes = require('./routes/reviews_routes')
-// // pass the request for /register
-// // to 'register_routes.js'
-// app.use('/reviews', register_routes)
-//
-// // NEW ROUTE - REGISTER - to show the new user form
-// app.get('/reviews', (req, res) => {
-//   res.render('users/reviews')
-// })
-// app.use('/reviews', review_routes)
-//
-// // NEW ROUTE - REGISTER - to show the new user form
-// app.get('/register', (req, res) => {
-//   res.render('users/register')
-// })
-// 19 OCT
-// NOW I'M ABLE TO CREATE NEW USER, BUT WE NEED TO REQUIRE
-// THE MODEL FILE FIRST
 // UPDATE 20 Oct
-// require all my route files
+// Refactoring routes
+// HOMEPAGE
+app.get('/', (req, res) => {
+  // the return of then
+  Restaurant.find().limit(10)
+  .then(restaurants => {
+    // at this point we got our data so we can render our page
+
+    res.render('home', {
+      restaurants
+      // remember object literal on es6, we don't need to type in pairs
+      // if key and argument is the same name
+      // i.e. restaurants: restaurants
+    })
+  })
+  .catch(err => {
+    console.log(err)
+  })
+})
 
 // NEW ROUTE - PROFILE - to show the user profile page
 // pseudocode
@@ -130,217 +128,21 @@ app.get('/profile/:slug', (req, res) => {
   }) // if i found the user
 })
 
-// NEW ROUTE - POST NEW USER - to handle register form submission
-// psuedocode
-// - read the form data
-// - create new user object
-// - use mongoose to create those document in the db
-// - redirect to somewhere
-// app.post('/register', (req, res) => {
-//   // UPDATE BEFORE CLASS 20 Oct
-//   var formData = req.body
-//   var newUser = new User({
-//     name: formData.name,
-//     // this name => slug => alex-min
-//     // hence, /profile/alex-min
-//     email: formData.email,
-//     password: formData.password // NOTICE, we're going to update this
-  // })
+// pass the request for /register
+// to 'register_routes.js'
+// pass the request for /reviews
+// to 'review_routes.js'
+// pass the request for /restaurants
+// to 'restaurant_routes.js'
 
-  // // PITSTOP: UPDATE UPDATE
-  // // no .catch() for save
-  // // this is very similar to how mongoose.connect
-  // newUser.save() // save the object that was created
-  // .then(
-  //   user => res.redirect(`/profile/${user.slug}`),
-  //   // success flow, redirect to profile page
-  //   err => res.send(err) // error flow
-  // )
+app.use('/register', register_routes)
+app.use('/reviews', review_routes)
+app.use('/restaurants', restaurant_routes)
 
-// FIND ALL REVIEW
-app.get('/reviews', (req, res) => {
-  Review.find()
-  .populate('author')
-  // it will go to the field called `author`
-  // and look at the schema
-  // find what it's referring to
-  .then(data => res.send(data))
-})
-
-// CREATE NEW REVIEW
-app.post('/reviews', (req, res) => {
-  // UPDATE BEFORE 20 OCT => update route to `/reviews` for uniformity sake
-  // similar flow like registration
-  // - take form data
-  // - create new review
-
-  // TODO: link currently logged in User with review form
-  var formData = req.body
-
-  var newReview = new Review({
-    title: formData.title,
-    description: formData.description,
-    author: '59e81c0f83674583051f18b1'
-  }) // creating empty `Review` object
-
-  newReview.save() // save the object that was created
-  .then(
-    // success flow, for now is to redirect to all reviews route
-    () => res.redirect('/reviews'),
-    err => res.send('error happened')
-  )
-})
-
-// READ ALL
-app.get('/', (req, res) => {
-  // the return of then
-  Restaurant.find().limit(10)
-  .then(restaurants => {
-    // at this point we got our data so we can render our page
-
-    res.render('home', {
-      restaurants
-      // remember object literal on es6, we don't need to type in pairs
-      // if key and argument is the same name
-      // i.e. restaurants: restaurants
-    })
-  })
-  .catch(err => {
-    console.log(err)
-  })
-})
-
-// FORM PAGE (NOT WITHIN CRUD)
-// note: this route must be before '/restaurants/:id'. WHY?
-app.get('/restaurants/new', (req, res) => {
-  res.render('restaurants/new')
-})
-
-// UPDATE 19 OCT
-// PSEUDOCODE
-// - check the url, if the param is 24 in length
-// - run next route
-// - if not
-//  - find by slug
-app.get('/restaurants/:slug', (req, res, next) => {
-  // res.send(`find existing restaurant with slug: ${req.params.slug.length}`)
-  var slug = req.params.slug
-  if (slug.length === 24) {
-    next()
-  } else {
-    // this part here, runs if slug is less than 24
-    // technically this part here, is the same like the part after
-    Restaurant.findOne({
-      slug // remember the es6 object literal
-    })
-    .populate('owner')
-    .then(restaurant => {
-      // UPDATE BEFORE CLASS 20 OCT
-      // please take a look at the view file `restaurants/show`
-      res.render('restaurants/show', {
-        restaurant
-      })
-    })
-  }
-})
-
-// READ ONE
-app.get('/restaurants/:id', (req, res) => {
-  // instead of find all, we can `findById`
-  Restaurant
-  .findById(req.params.id) // no need limit since there's only one
-  .populate('owner')
-  // .populate(<field name>)
-  .then(restaurant => {
-    // not restaurants, cos it's single restaurant
-
-    // PITSTOP: look at the views folders here, compare it with the res.render
-    // first argument
-
-    // res.send(restaurant)
-
-    res.render('restaurants/show', {
-      restaurant
-    })
-  })
-  .catch(err => {
-    console.log(err)
-  })
-})
-
-// CREATE ONE
-// pseudocode
-// get the value from the form
-// create new object based on that form
-// save to the database
-app.post('/restaurants', (req, res) => {
-  var formData = req.body
-
-  // remember how to create new object from constructor, it's back again
-  // thanks to FORMIDABLE mongoose
-  var newRestaurant = new Restaurant()
-  newRestaurant.name = formData.name
-  newRestaurant.cuisine = formData.cuisine
-
-  // new field for `owner`
-  newRestaurant.owner = '59e81ae9c90d27819c166d67'
-
-  // when save function is done
-  // the newRestaurant will have an id, hence we can go straight to the
-  // newly created restaurant page
-
-  // res.send(newRestaurant)
-  // use `res.send` to test the output of anything
-
-  newRestaurant.save()
-  // UPDATE. 19 Oct
-  .then(
-    () => res.redirect(`/restaurants/${newRestaurant.id}`),
-    err => res.send(err)
-  ) // why? mongoose save(), doesn't have .catch()
-})
-
-// UPDATE ONE
-// pseudocode
-// get the id from the url
-// get the updated value from form
-// find restaurant object by id given
-// update with the input from form
-// save to the db
-app.put('/restaurants/:id', (req, res) => {
-  // thankfully since we're using mongoose
-  // we don't have to find and update separately
-  // there's a method in mongoose just for that
-  // `findByIdAndUpdate` http://mongoosejs.com/docs/api.html#model_Model.findByIdAndUpdate
-
-  var formData = req.body
-  Restaurant.findByIdAndUpdate(req.params.id, {
-    name: formData.name,
-    cuisine: formData.cuisine
-  })
-  .then(() => res.redirect(`/restaurants/${req.params.id}`))
-  .catch(err => console.log(err))
-  // after update is done, redirect back to resto id
-  // this redirection can go to anywhere as long as you have the routes with you
-})
-
-// DELETE ONE
-// pseudocode
-// get the id from the url
-// find restaurant object by id given
-// delete the whole object from the db
-app.delete('/restaurants/:id', (req, res) => {
-  // (AGAIN) thankfully since we're using mongoose
-  // there's a method in mongoose just for that
-  // `findByIdAndRemove` http://mongoosejs.com/docs/api.html#model_Model.findByIdAndRemove
-
-  Restaurant.findByIdAndRemove(req.params.id)
-  .then(() => res.redirect(`/`))
-  .catch(err => console.log(err))
-  // after delete is done, redirect back to home page
-  // (cos the current restaurant page is gone)
-  // this redirection can go to anywhere as long as you have the routes with you
-})
+// UPDATE 20 October,
+// remove all registration routes in index.js
+// remove all review routes in index.js
+// remove all restaurant routes in index.js
 
 // opening the port for express
 app.listen(port, () => {
